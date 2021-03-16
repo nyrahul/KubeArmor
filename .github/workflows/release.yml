@@ -16,9 +16,9 @@ jobs:
         uses: actions/checkout@v2
       - name: Set Environment
         run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
-        #      - name: Generate KubeArmor artifacts
-        #run: ./KubeArmor/build/build_kubearmor.sh ${{ steps.vars.outputs.tag }}
-        #      - name: Run KubeArmor tests:w
+      - name: Generate KubeArmor artifacts
+        run: ./KubeArmor/build/build_kubearmor.sh ${{ steps.vars.outputs.tag }}
+        #      - name: Run KubeArmor tests
         #        run: ./contribution/self-managed-k8s/setup.sh && ./tests/go-test-kubearmor-local.sh
         #      - name: Create Release
         #        id: create_release
@@ -32,13 +32,10 @@ jobs:
         #  prerelease: false
         #  body: |
         #    Note for maintainers:: Please, update the description with the actual release notes.
-      - name: Publish to Registry
-        uses: elgohr/Publish-Docker-Github-Action@master
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
         with:
-          name: accuknox/kubearmor
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_AUTHTOK }}
-          tag_names: true
-          workdir: KubeArmor/build
-          context: KubeArmor/build
-          dockerfile: KubeArmor/build/Dockerfile.kubearmor
+      - name: Push KubeArmor imagess to Docker
+        run: ./KubeArmor/build/build_kubearmor.sh ${{ steps.vars.outputs.tag }}
