@@ -9,7 +9,7 @@ name: Create a release
 jobs:
   build:
     name: Create KubeArmor Release
-    if: github.repository == 'accuknox/KubeArmor'
+    if: github.repository == 'nyrahul/KubeArmor'    # XXX
     runs-on: ubuntu-latest
     steps:
       - name: Checkout KubeArmor code
@@ -18,8 +18,8 @@ jobs:
         run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
       - name: Generate KubeArmor artifacts
         run: ./KubeArmor/build/build_kubearmor.sh ${{ steps.vars.outputs.tag }}
-      - name: Run KubeArmor tests
-        run: ./contribution/self-managed-k8s/setup.sh && ./tests/go-test-kubearmor-local.sh
+        #      - name: Run KubeArmor tests:w
+        #        run: ./contribution/self-managed-k8s/setup.sh && ./tests/go-test-kubearmor-local.sh
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
