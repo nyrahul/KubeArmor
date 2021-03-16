@@ -40,4 +40,5 @@ jobs:
           password: ${{ secrets.DOCKER_AUTHTOK }}
           tag_names: true
           workdir: KubeArmor/build
+          context: KubeArmor/build
           dockerfile: KubeArmor/build/Dockerfile.kubearmor
