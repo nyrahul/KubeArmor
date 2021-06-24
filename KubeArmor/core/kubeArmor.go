@@ -485,6 +485,8 @@ func KubeArmor(clusterName, gRPCPort, logPath string, enableAuditd, enableHostPo
 		}
 	} else {
 		dm.LogFeeder.Err("Failed to initialize the Kubernetes client")
+		dm.DestroyKubeArmorDaemon()
+		return
 	}
 
 	// wait for a while
