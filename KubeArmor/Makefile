@@ -37,13 +37,22 @@ endif
 	cd $(CURDIR); CGO_ENABLED=0 go build -ldflags "$(GIT_INFO)" -o kubearmor main.go
 
 # build-macos builds the kubearmor binary on non-Linux hosts (e.g. macOS) for
-# development and tooling. The eBPF code is excluded via build constraints, so the
-# resulting binary cannot enforce policies - it is only meant for compilation,
-# vetting and unit-testing the platform-agnostic packages.
+# development and tooling. The eBPF code is excluded via build constraints; the
+# resulting binary enforces on macOS only via the Apple Endpoint Security helper
+# (see build-es-helper), otherwise it runs observe-only.
 .PHONY: build-macos
 build-macos:
 	cd $(CURDIR); go mod tidy
 	cd $(CURDIR); CGO_ENABLED=0 go build -ldflags "$(GIT_INFO)" -o kubearmor main.go
+
+# build-es-helper builds + signs the native Apple Endpoint Security client used for
+# macOS block enforcement. Ad-hoc signature by default (only honoured on a
+# SIP+AMFI-disabled dev box); pass SIGN_ID="Developer ID Application: ..." for a
+# release build, then notarize. macOS only.
+.PHONY: build-es-helper
+build-es-helper:
+	$(MAKE) -C $(CURDIR)/enforcer/esenforcer/helper $(if $(SIGN_ID),SIGN_ID="$(SIGN_ID)",)
+	cp $(CURDIR)/enforcer/esenforcer/helper/kubearmor-es-helper $(CURDIR)/kubearmor-es-helper
 
 .PHONY: protobuf
 protobuf:

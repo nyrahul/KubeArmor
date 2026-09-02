@@ -1348,7 +1348,7 @@ func setLogFields(log *tp.Log, existAllowPolicy bool, defaultPosture string, vis
 	if existAllowPolicy && defaultPosture == "audit" && (*log).Result == "Passed" {
 
 		(*log).PolicyName = "DefaultPosture"
-		(*log).Enforcer = "eBPF Monitor"
+		(*log).Enforcer = monitorEnforcerName
 		(*log).Action = "Audit"
 
 		if containerEvent {
@@ -1365,7 +1365,7 @@ func setLogFields(log *tp.Log, existAllowPolicy bool, defaultPosture string, vis
 	if existAllowPolicy && defaultPosture == "block" && (*log).Result != "Passed" {
 
 		(*log).PolicyName = "DefaultPosture"
-		(*log).Enforcer = "eBPF Monitor"
+		(*log).Enforcer = monitorEnforcerName
 		(*log).Action = "Block"
 
 		if containerEvent {
@@ -1545,7 +1545,7 @@ func (fd *Feeder) UpdateMatchedPolicy(log tp.Log) tp.Log {
 							}
 
 							if log.PolicyEnabled == tp.KubeArmorPolicyAudited {
-								log.Enforcer = "eBPF Monitor"
+								log.Enforcer = monitorEnforcerName
 							} else {
 								log.Enforcer = fd.GetEnforcer()
 							}
@@ -1573,7 +1573,7 @@ func (fd *Feeder) UpdateMatchedPolicy(log tp.Log) tp.Log {
 								log.Message = secPolicy.Message
 							}
 
-							log.Enforcer = "eBPF Monitor"
+							log.Enforcer = monitorEnforcerName
 							log.Action = secPolicy.Action
 
 							skip = true
@@ -1601,7 +1601,7 @@ func (fd *Feeder) UpdateMatchedPolicy(log tp.Log) tp.Log {
 							}
 
 							if log.PolicyEnabled == tp.KubeArmorPolicyAudited {
-								log.Enforcer = "eBPF Monitor"
+								log.Enforcer = monitorEnforcerName
 							} else {
 								log.Enforcer = fd.GetEnforcer()
 							}
@@ -1630,7 +1630,7 @@ func (fd *Feeder) UpdateMatchedPolicy(log tp.Log) tp.Log {
 						log.ATags = []string{}
 						log.Message = ""
 
-						log.Enforcer = "eBPF Monitor"
+						log.Enforcer = monitorEnforcerName
 						log.Action = "Block"
 
 						continue
@@ -1648,7 +1648,7 @@ func (fd *Feeder) UpdateMatchedPolicy(log tp.Log) tp.Log {
 						log.ATags = []string{}
 						log.Message = ""
 
-						log.Enforcer = "eBPF Monitor"
+						log.Enforcer = monitorEnforcerName
 
 						if fd.DefaultPostures[log.NamespaceName].FileAction == "block" {
 							log.Action = "Audit (Block)"
@@ -1673,7 +1673,7 @@ func (fd *Feeder) UpdateMatchedPolicy(log tp.Log) tp.Log {
 					log.ATags = []string{}
 					log.Message = ""
 
-					log.Enforcer = "eBPF Monitor"
+					log.Enforcer = monitorEnforcerName
 					log.Action = "Audit (Block)"
 				}
 
@@ -1688,7 +1688,7 @@ func (fd *Feeder) UpdateMatchedPolicy(log tp.Log) tp.Log {
 					log.ATags = []string{}
 					log.Message = ""
 
-					log.Enforcer = "eBPF Monitor"
+					log.Enforcer = monitorEnforcerName
 					log.Action = "Audit"
 				}
 
@@ -1766,7 +1766,7 @@ func (fd *Feeder) UpdateMatchedPolicy(log tp.Log) tp.Log {
 							}
 
 							if log.PolicyEnabled == tp.KubeArmorPolicyAudited {
-								log.Enforcer = "eBPF Monitor"
+								log.Enforcer = monitorEnforcerName
 							} else {
 								log.Enforcer = fd.GetEnforcer()
 							}
@@ -1795,7 +1795,7 @@ func (fd *Feeder) UpdateMatchedPolicy(log tp.Log) tp.Log {
 								log.Message = secPolicy.Message
 							}
 
-							log.Enforcer = "eBPF Monitor"
+							log.Enforcer = monitorEnforcerName
 							log.Action = secPolicy.Action
 
 							skip = true
@@ -1821,7 +1821,7 @@ func (fd *Feeder) UpdateMatchedPolicy(log tp.Log) tp.Log {
 							}
 
 							if log.PolicyEnabled == tp.KubeArmorPolicyAudited {
-								log.Enforcer = "eBPF Monitor"
+								log.Enforcer = monitorEnforcerName
 							} else {
 								log.Enforcer = fd.GetEnforcer()
 							}
@@ -1856,7 +1856,7 @@ func (fd *Feeder) UpdateMatchedPolicy(log tp.Log) tp.Log {
 						log.Tags = ""
 						log.Message = ""
 
-						log.Enforcer = "eBPF Monitor"
+						log.Enforcer = monitorEnforcerName
 						log.Action = "Block"
 
 						continue
@@ -1873,7 +1873,7 @@ func (fd *Feeder) UpdateMatchedPolicy(log tp.Log) tp.Log {
 						log.Tags = ""
 						log.Message = ""
 
-						log.Enforcer = "eBPF Monitor"
+						log.Enforcer = monitorEnforcerName
 
 						if fd.DefaultPostures[log.NamespaceName].NetworkAction == "block" {
 							log.Action = "Audit (Block)"
@@ -1896,7 +1896,7 @@ func (fd *Feeder) UpdateMatchedPolicy(log tp.Log) tp.Log {
 					log.Tags = ""
 					log.Message = ""
 
-					log.Enforcer = "eBPF Monitor"
+					log.Enforcer = monitorEnforcerName
 					log.Action = "Audit (Block)"
 				}
 
@@ -1911,7 +1911,7 @@ func (fd *Feeder) UpdateMatchedPolicy(log tp.Log) tp.Log {
 					log.Tags = ""
 					log.Message = ""
 
-					log.Enforcer = "eBPF Monitor"
+					log.Enforcer = monitorEnforcerName
 					log.Action = "Audit"
 				}
 
@@ -2089,7 +2089,7 @@ func (fd *Feeder) UpdateMatchedPolicy(log tp.Log) tp.Log {
 								}
 
 								if log.PolicyEnabled == tp.KubeArmorPolicyAudited {
-									log.Enforcer = "eBPF Monitor"
+									log.Enforcer = monitorEnforcerName
 								} else {
 									log.Enforcer = fd.GetEnforcer()
 								}
@@ -2118,7 +2118,7 @@ func (fd *Feeder) UpdateMatchedPolicy(log tp.Log) tp.Log {
 									log.Message = secPolicy.Message
 								}
 
-								log.Enforcer = "eBPF Monitor"
+								log.Enforcer = monitorEnforcerName
 								log.Action = secPolicy.Action
 
 								skip = true
@@ -2144,7 +2144,7 @@ func (fd *Feeder) UpdateMatchedPolicy(log tp.Log) tp.Log {
 								}
 
 								if log.PolicyEnabled == tp.KubeArmorPolicyAudited {
-									log.Enforcer = "eBPF Monitor"
+									log.Enforcer = monitorEnforcerName
 								} else {
 									log.Enforcer = fd.GetEnforcer()
 								}
@@ -2172,7 +2172,7 @@ func (fd *Feeder) UpdateMatchedPolicy(log tp.Log) tp.Log {
 						log.Tags = ""
 						log.Message = ""
 
-						log.Enforcer = "eBPF Monitor"
+						log.Enforcer = monitorEnforcerName
 						log.Action = "Block"
 
 						continue
@@ -2189,7 +2189,7 @@ func (fd *Feeder) UpdateMatchedPolicy(log tp.Log) tp.Log {
 						log.Tags = ""
 						log.Message = ""
 
-						log.Enforcer = "eBPF Monitor"
+						log.Enforcer = monitorEnforcerName
 
 						if fd.DefaultPostures[log.NamespaceName].CapabilitiesAction == "block" {
 							log.Action = "Audit (Block)"
@@ -2212,7 +2212,7 @@ func (fd *Feeder) UpdateMatchedPolicy(log tp.Log) tp.Log {
 					log.Tags = ""
 					log.Message = ""
 
-					log.Enforcer = "eBPF Monitor"
+					log.Enforcer = monitorEnforcerName
 					log.Action = "Audit (Block)"
 				}
 
@@ -2227,7 +2227,7 @@ func (fd *Feeder) UpdateMatchedPolicy(log tp.Log) tp.Log {
 					log.Tags = ""
 					log.Message = ""
 
-					log.Enforcer = "eBPF Monitor"
+					log.Enforcer = monitorEnforcerName
 					log.Action = "Audit"
 				}
 

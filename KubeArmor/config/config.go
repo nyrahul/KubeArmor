@@ -57,6 +57,8 @@ type KubearmorConfig struct {
 	ConfigUntrackedNs  atomic.Value // untracked namespaces
 	LsmOrder           []string     // LSM order
 	BPFFsPath          string       // path to the BPF filesystem
+	ESHelperPath       string       // macOS: path to kubearmor-es-helper (Apple Endpoint Security)
+	ESSocketPath       string       // macOS: AF_UNIX socket between the daemon and kubearmor-es-helper
 	EnforcerAlerts     bool         // policy enforcer
 	DefaultPostureLogs bool         // Enable/Disable Default Posture logs for AppArmor LSM
 	InitTimeout        string       // Timeout for main thread init stages
@@ -122,6 +124,8 @@ const (
 	ConfigUntrackedNs                    string = "untrackedNs"
 	LsmOrder                             string = "lsm"
 	BPFFsPath                            string = "bpfFsPath"
+	ESHelperPath                         string = "esHelperPath"
+	ESSocketPath                         string = "esSocketPath"
 	EnforcerAlerts                       string = "enforcerAlerts"
 	ConfigDefaultPostureLogs             string = "defaultPostureLogs"
 	ConfigInitTimeout                    string = "initTimeout"
@@ -183,6 +187,8 @@ func readCmdLineParams() {
 	lsmOrder := flag.String(LsmOrder, "bpf,apparmor,selinux", "lsm preference order to use, available lsms [bpf, apparmor, selinux]")
 
 	bpfFsPath := flag.String(BPFFsPath, "/sys/fs/bpf", "Path to the BPF filesystem to use for storing maps")
+	esHelperPath := flag.String(ESHelperPath, "", "macOS: path to kubearmor-es-helper (default: alongside the kubearmor binary, else /usr/local/bin/kubearmor-es-helper)")
+	esSocketPath := flag.String(ESSocketPath, "/var/run/kubearmor/es.sock", "macOS: AF_UNIX socket between the daemon and kubearmor-es-helper")
 	enforcerAlerts := flag.Bool(EnforcerAlerts, true, "ebpf alerts")
 
 	defaultPostureLogs := flag.Bool(ConfigDefaultPostureLogs, true, "Default Posture Alerts (for Apparmor only)")
@@ -264,6 +270,8 @@ func readCmdLineParams() {
 	viper.SetDefault(LsmOrder, *lsmOrder)
 
 	viper.SetDefault(BPFFsPath, *bpfFsPath)
+	viper.SetDefault(ESHelperPath, *esHelperPath)
+	viper.SetDefault(ESSocketPath, *esSocketPath)
 
 	viper.SetDefault(EnforcerAlerts, *enforcerAlerts)
 
@@ -372,6 +380,8 @@ func LoadConfig() error {
 	GlobalCfg.LsmOrder = strings.Split(viper.GetString(LsmOrder), ",")
 
 	GlobalCfg.BPFFsPath = viper.GetString(BPFFsPath)
+	GlobalCfg.ESHelperPath = viper.GetString(ESHelperPath)
+	GlobalCfg.ESSocketPath = viper.GetString(ESSocketPath)
 
 	GlobalCfg.InitTimeout = viper.GetString(ConfigInitTimeout)
 

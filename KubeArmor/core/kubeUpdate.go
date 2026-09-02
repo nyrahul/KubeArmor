@@ -72,9 +72,10 @@ func (dm *KubeArmorDaemon) HandleNodeAnnotations(node *tp.Node) {
 	hasAppArmor := strings.Contains(lsm, "apparmor")
 	hasSelinux := strings.Contains(lsm, "selinux")
 	hasBPF := strings.Contains(lsm, "bpf")
+	hasES := strings.Contains(lsm, "AppleEndpointSecurity") // macOS
 
-	if !hasBPF && !hasSelinux && !hasAppArmor {
-		// exception: neither AppArmor, SELinux or BPF
+	if !hasBPF && !hasSelinux && !hasAppArmor && !hasES {
+		// exception: no host enforcer at all
 		if node.Annotations["kubearmor-policy"] == "enabled" {
 			node.Annotations["kubearmor-policy"] = "audited"
 		}

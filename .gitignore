@@ -3,6 +3,8 @@
 # the KubeArmor/ source directory on case-insensitive filesystems (macOS), which
 # would ignore every untracked file under it.
 /KubeArmor/kubearmor
+/KubeArmor/kubearmor-es-helper
+/KubeArmor/enforcer/esenforcer/helper/kubearmor-es-helper
 karmor
 snitch
 kubearmor-operator

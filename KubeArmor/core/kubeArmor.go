@@ -323,6 +323,8 @@ func (dm *KubeArmorDaemon) MonitorSystemEvents() {
 		go dm.SystemMonitor.TraceSyscall()
 		go dm.SystemMonitor.UpdateLogs()
 		go dm.SystemMonitor.CleanUpExitedHostPids()
+		// macOS: drive the Apple eslogger telemetry source (no-op on Linux)
+		go dm.SystemMonitor.InitESLogger()
 	}
 }
 

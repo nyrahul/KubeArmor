@@ -6,17 +6,12 @@ package enforcer
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 
 	cle "github.com/cilium/ebpf"
 
-	probe "github.com/kubearmor/KubeArmor/KubeArmor/utils/bpflsmprobe"
-
 	kl "github.com/kubearmor/KubeArmor/KubeArmor/common"
-	cfg "github.com/kubearmor/KubeArmor/KubeArmor/config"
 	be "github.com/kubearmor/KubeArmor/KubeArmor/enforcer/bpflsm"
+	es "github.com/kubearmor/KubeArmor/KubeArmor/enforcer/esenforcer"
 	fd "github.com/kubearmor/KubeArmor/KubeArmor/feeder"
 	mon "github.com/kubearmor/KubeArmor/KubeArmor/monitor"
 	tp "github.com/kubearmor/KubeArmor/KubeArmor/types"
@@ -38,6 +33,9 @@ type RuntimeEnforcer struct {
 
 	// LSM - SELinux
 	seLinuxEnforcer *SELinuxEnforcer
+
+	// macOS - Apple Endpoint Security
+	esEnforcer *es.ESEnforcer
 }
 
 // selectLsm Function
@@ -76,6 +74,8 @@ lsmdispatch:
 		goto apparmor
 	case "selinux":
 		goto selinux
+	case "AppleEndpointSecurity":
+		goto appleendpointsecurity
 	default:
 		goto lsmselection
 	}
@@ -125,54 +125,26 @@ bpf:
 	}
 	goto lsmselection
 
+appleendpointsecurity:
+	re.esEnforcer, err = es.NewESEnforcer(node, logger)
+	if re.esEnforcer != nil {
+		if err != nil {
+			re.Logger.Print("Error Initialising Apple Endpoint Security Enforcer, Cleaning Up")
+			if derr := re.esEnforcer.DestroyESEnforcer(); derr != nil {
+				re.Logger.Err(derr.Error())
+			}
+			re.esEnforcer = nil
+			goto lsmselection
+		}
+		re.Logger.Print("Initialized Apple Endpoint Security Enforcer")
+		re.EnforcerType = "AppleEndpointSecurity"
+		logger.UpdateEnforcer(re.EnforcerType)
+		return re
+	}
+	goto lsmselection
+
 nil:
 	return nil
-}
-
-// NewRuntimeEnforcer Function
-func NewRuntimeEnforcer(node tp.Node, pinpath string, logger *fd.Feeder, monitor *mon.SystemMonitor) *RuntimeEnforcer {
-	availablelsms := []string{"bpf", "selinux", "apparmor"}
-	re := &RuntimeEnforcer{}
-	re.Logger = logger
-
-	lsms := []string{}
-
-	lsmFile := []byte{}
-	lsmPath := "/sys/kernel/security/lsm"
-
-	if !kl.IsK8sLocal() {
-		// mount securityfs
-		if err := kl.RunCommandAndWaitWithErr("mount", []string{"-t", "securityfs", "securityfs", "/sys/kernel/security"}); err != nil {
-			if _, err := os.Stat(filepath.Clean("/sys/kernel/security")); err != nil {
-				re.Logger.Warnf("Failed to read /sys/kernel/security (%s)", err.Error())
-				goto probeBPFLSM
-			}
-		}
-	}
-
-	if _, err := os.Stat(filepath.Clean(lsmPath)); err == nil {
-		lsmFile, err = os.ReadFile(lsmPath)
-		if err != nil {
-			re.Logger.Warnf("Failed to read /sys/kernel/security/lsm (%s)", err.Error())
-			goto probeBPFLSM
-		}
-	}
-
-	lsms = strings.Split(string(lsmFile), ",")
-
-probeBPFLSM:
-	if !kl.ContainsElement(lsms, "bpf") {
-		err := probe.CheckBPFLSMSupport()
-		if err == nil {
-			lsms = append(lsms, "bpf")
-		} else {
-			re.Logger.Warnf("BPF LSM not supported %s", err.Error())
-		}
-	}
-
-	re.Logger.Printf("Supported LSMs: %s", strings.Join(lsms, ","))
-
-	return selectLsm(re, cfg.GlobalCfg.LsmOrder, availablelsms, lsms, node, pinpath, logger, monitor)
 }
 
 // RegisterContainer registers container identifiers to BPFEnforcer Map
@@ -234,6 +206,8 @@ func (re *RuntimeEnforcer) UpdateSecurityPolicies(endPoint tp.EndPoint) {
 		re.bpfEnforcer.UpdateSecurityPolicies(endPoint)
 	} else if re.EnforcerType == "AppArmor" {
 		re.appArmorEnforcer.UpdateSecurityPolicies(endPoint)
+	} else if re.EnforcerType == "AppleEndpointSecurity" {
+		re.esEnforcer.UpdateSecurityPolicies(endPoint)
 	}
 }
 
@@ -250,6 +224,8 @@ func (re *RuntimeEnforcer) UpdateHostSecurityPolicies(secPolicies []tp.HostSecur
 		re.appArmorEnforcer.UpdateHostSecurityPolicies(secPolicies)
 	} else if re.EnforcerType == "SELinux" {
 		re.seLinuxEnforcer.UpdateHostSecurityPolicies(secPolicies)
+	} else if re.EnforcerType == "AppleEndpointSecurity" {
+		re.esEnforcer.UpdateHostSecurityPolicies(secPolicies)
 	}
 }
 
@@ -287,6 +263,15 @@ func (re *RuntimeEnforcer) DestroyRuntimeEnforcer() error {
 				errorLSM = true
 			} else {
 				re.Logger.Print("Destroyed SELinux Enforcer")
+			}
+		}
+	} else if re.EnforcerType == "AppleEndpointSecurity" {
+		if re.esEnforcer != nil {
+			if err := re.esEnforcer.DestroyESEnforcer(); err != nil {
+				re.Logger.Err(err.Error())
+				errorLSM = true
+			} else {
+				re.Logger.Print("Destroyed Apple Endpoint Security Enforcer")
 			}
 		}
 	}

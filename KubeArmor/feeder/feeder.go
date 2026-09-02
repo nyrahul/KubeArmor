@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -31,6 +32,18 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
 )
+
+// monitorEnforcerName is the Enforcer label for alerts that were only observed,
+// not kernel-enforced: Audit rules, audited-mode endpoints, and default-posture
+// events. On macOS the observation comes from Apple Endpoint Security (via
+// eslogger), so it matches the ES enforcer / karmor probe ActiveLSM; elsewhere
+// the observer is the eBPF system monitor.
+var monitorEnforcerName = func() string {
+	if runtime.GOOS == "darwin" {
+		return "AppleEndpointSecurity"
+	}
+	return "eBPF Monitor"
+}()
 
 // parseDataString parses a space-separated key=value string into a map
 func parseDataString(data string) map[string]string {
@@ -302,8 +315,8 @@ func NewFeeder(node *tp.Node, nodeLock **sync.RWMutex) (feeder *Feeder) {
 		fd.LogFile = logFile
 	}
 
-	// default enforcer
-	fd.Enforcer = "eBPF Monitor"
+	// default enforcer (platform observer name until an LSM enforcer registers)
+	fd.Enforcer = monitorEnforcerName
 	fd.EnforcerLock = new(sync.RWMutex)
 
 	// initialize msg structs
@@ -674,7 +687,9 @@ func (fd *Feeder) PushLog(log tp.Log) {
 	   container/host log depending upon the defaultPostureLogs flag
 	*/
 	isBPFLSM := fd.GetEnforcer() == "BPFLSM"
-	if !common.IsPresetEnforcer(log.Enforcer) {
+	// The macOS Apple Endpoint Security helper sends fully-formed block alerts
+	// (Type/Action/Result/PolicyName already set); do not re-match or re-type them.
+	if !common.IsPresetEnforcer(log.Enforcer) && log.Enforcer != "AppleEndpointSecurity" {
 		if (cfg.GlobalCfg.EnforcerAlerts && isBPFLSM && log.Enforcer == "") || (!isBPFLSM && !cfg.GlobalCfg.DefaultPostureLogs) {
 			log = fd.UpdateMatchedPolicy(log)
 			isDefaultPostureLog := strings.Contains(log.PolicyName, "DefaultPosture")
@@ -774,8 +789,9 @@ func (fd *Feeder) PushLog(log tp.Log) {
 	// gRPC output
 	if log.Type == "MatchedPolicy" || log.Type == "MatchedHostPolicy" || log.Type == "SystemEvent" {
 
-		// checking throttling condition for "Audit" alerts when enforcer is 'eBPF Monitor'
-		if cfg.GlobalCfg.AlertThrottling && ((strings.Contains(log.Action, "Audit") && log.Enforcer == "eBPF Monitor") || (log.Type == "MatchedHostPolicy" && (log.Enforcer == "AppArmor" || log.Enforcer == "eBPF Monitor"))) {
+		// checking throttling condition for "Audit" alerts observed by the platform
+		// monitor (monitorEnforcerName: "eBPF Monitor" on Linux, "AppleEndpointSecurity" on macOS)
+		if cfg.GlobalCfg.AlertThrottling && ((strings.Contains(log.Action, "Audit") && log.Enforcer == monitorEnforcerName) || (log.Type == "MatchedHostPolicy" && (log.Enforcer == "AppArmor" || log.Enforcer == monitorEnforcerName))) {
 			nsKey := fd.ContainerNsKey[log.ContainerID]
 			alert, throttle := fd.ShouldDropAlertsPerContainer(nsKey.PidNs, nsKey.MntNs)
 			if alert && throttle {
@@ -1046,11 +1062,12 @@ func (uname *UserNameMap) GetUsername(uid uint32) string {
 	u, err := user.LookupId(uidStr)
 
 	name := ""
-	if err != nil {
-		// notfound
-		name = ""
-	} else {
+	if err == nil {
 		name = u.Username
+	} else if n, ok := platformUsernameLookup(uid); ok {
+		// os/user.LookupId only reads /etc/passwd when cgo is disabled; on some
+		// platforms (e.g. macOS with CGO_ENABLED=0) real users are not there.
+		name = n
 	}
 
 	// Update cache

@@ -6,6 +6,7 @@
 package common
 
 import (
+	"os"
 	"strings"
 	"time"
 
@@ -44,9 +45,16 @@ func GetMachineID(extraPaths ...string) string {
 	return ""
 }
 
-// GetSupportedLSMs returns "" — Linux Security Modules do not exist on macOS, so
-// KubeArmor has no host enforcer here and runs in audit-only mode.
-func GetSupportedLSMs() string { return "" }
+// GetSupportedLSMs reports the host enforcer available on macOS. There is no LSM
+// securityfs; the Apple Endpoint Security enforcer needs root, so it is reported as
+// available only when running as root. Whether it actually prevents (vs records via
+// the eslogger audit path) depends on the kubearmor-es-helper connecting.
+func GetSupportedLSMs() string {
+	if os.Geteuid() == 0 {
+		return "AppleEndpointSecurity"
+	}
+	return ""
+}
 
 // GetBootTime returns the system boot time as a string.
 func GetBootTime() string {
